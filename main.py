@@ -20,11 +20,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
 
-# Carrega e verifica a GOOGLE_API_KEY
-google_api_key_env = os.getenv("GOOGLE_API_KEY")
+# Carrega e verifica a GOOGLE_API_KEY/CHATGPT
+google_api_key_env = os.getenv("CHATGPT_API_KEY")
 if not google_api_key_env:
-    logging.error("GOOGLE_API_KEY não encontrada nas variáveis de ambiente.")
-    raise ValueError("GOOGLE_API_KEY não encontrada. Por favor, configure-a no arquivo .env.")
+    logging.error("CHATGPT_API_KEY não encontrada nas variáveis de ambiente.")
+    raise ValueError("CHATGPT_API_KEY não encontrada. Por favor, configure-a no arquivo .env.")
 
 # Inicializa o aplicativo FastAPI
 app = FastAPI()
@@ -88,7 +88,7 @@ def load_and_process_documents(directory_path: str):
         # Inicializa o modelo Gemini para a cadeia RAG
         # Usaremos 'gemini-pro' ou 'gemini-1.0-pro' para compatibilidade.
         llm = ChatGoogleGenerativeAI(model="gemini-pro", google_api_key=google_api_key_env)
-        logging.info("Modelo Gemini-pro inicializado para a cadeia RAG.")
+        logging.info("Modelo Chatgpt inicializado para a cadeia RAG.")
 
         # Define o prompt do sistema para o chatbot com contexto RAG
         # O prompt agora inclui um placeholder para o contexto recuperado
