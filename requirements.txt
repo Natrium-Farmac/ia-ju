@@ -2,8 +2,10 @@ fastapi==0.116.1
 uvicorn==0.35.0
 python-dotenv==1.1.1
 twilio==9.6.5
-langchain-google-genai
-google-generativeai
+# Removido: langchain-google-genai
+# Removido: google-generativeai
+langchain-openai # Para integração LangChain com OpenAI
+openai # Biblioteca oficial da OpenAI
 langchain-core
 python-multipart
 pypdf
