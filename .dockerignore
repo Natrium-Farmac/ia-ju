@@ -1,29 +1,6 @@
-# .dockerignore
-# Ignorar o ambiente virtual Python
-venv/
-
-# Ignorar arquivos de cache do Python
-__pycache__/
-*.pyc
-
-# Ignorar o arquivo de variáveis de ambiente (CRUCIAL PARA SEGURANÇA)
-.env
-
-# Ignorar arquivos Git
 .git
 .gitignore
-
-# Ignorar arquivos de log (se você criar algum)
-*.log
-logs/
-
-# Ignorar arquivos de dados temporários ou grandes (se houver)
-# data/  <-- Esta linha está comentada para que a pasta 'data' seja incluída no Docker
-tmp/
-
-# Ignorar arquivos específicos do IDE (se usar VS Code)
-.vscode/
-
-# Ignorar arquivos de sistema operacional
-.DS_Store # macOS
-Thumbs.db # Windows
+node_modules
+.env
+Dockerfile
+docker-compose.yml
