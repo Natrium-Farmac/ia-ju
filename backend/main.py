@@ -1,11 +1,11 @@
-# main.py
-from fastapi import FastAPI, Request, Response
-from twilio.twiml.messaging_response import MessagingResponse
-from dotenv import load_dotenv
-from pydantic import BaseModel # Importação adicionada para o frontend
+# Importações necessárias do FastAPI e outras bibliotecas
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List, Dict
 import os
 import logging
-from fastapi.middleware.cors import CORSMiddleware # Importação adicionada para permitir requisições do frontend
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
 # --- Novas importações para RAG e OpenAI ---
 from langchain_community.document_loaders import PyPDFLoader
@@ -13,6 +13,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableParallel, RunnablePassthrough
 
 # Importações específicas da OpenAI
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
@@ -61,7 +62,7 @@ def load_and_process_documents(directory_path: str):
     Carrega documentos de um diretório, divide-os, cria embeddings
     e os armazena em um vetor store Chroma.
     """
-    global vectorstore, retriever, llm, chain # Declarar como global para modificar
+    global vectorstore, retriever, llm, chain  # Declarar como global para modificar
 
     logging.info(f"Iniciando carregamento e processamento de documentos do diretório: {directory_path}")
 
@@ -77,10 +78,6 @@ def load_and_process_documents(directory_path: str):
         
         if not documents:
             logging.warning("Nenhum documento PDF encontrado para carregar. O RAG não será ativado.")
-            vectorstore = None
-            retriever = None
-            llm = None
-            chain = None
             return
 
         # 2. Dividir documentos em chunks menores
@@ -121,11 +118,16 @@ def load_and_process_documents(directory_path: str):
             ]
         )
 
+        # Função auxiliar para combinar documentos
         def combine_documents(docs):
             return "\n\n".join(doc.page_content for doc in docs)
 
+        # Monta a cadeia RAG
         chain = (
-            {"context": retriever | combine_documents, "user_message": lambda x: x["user_message"]}
+            RunnableParallel(
+                context=retriever | combine_documents,
+                user_message=RunnablePassthrough()
+            )
             | prompt
             | llm
             | StrOutputParser()
@@ -147,62 +149,35 @@ async def root():
     logging.info("Requisição GET recebida na raiz.")
     return {"message": "Chatbot da Farmácia está online e aguardando mensagens!"}
 
-# --- Novo endpoint para o frontend web ---
+# --- Endpoint para o frontend web ---
 class ChatRequest(BaseModel):
-    message: str
+    user_message: str
 
-@app.post("/chat")
+@app.post("/api/chat")
 async def handle_chat_message(request: ChatRequest):
-    logging.info(f"Requisição de chat recebida: {request.message}")
+    logging.info(f"Requisição de chat recebida: {request.user_message}")
 
     if not chain:
         logging.error("A cadeia RAG não foi inicializada.")
         return {"response": "Desculpe, o sistema de conhecimento está indisponível no momento."}
 
     try:
-        bot_response = chain.invoke({"user_message": request.message})
+        # A nova cadeia LangChain já trata a entrada de forma simples,
+        # portanto, passamos a mensagem do usuário diretamente.
+        bot_response = chain.invoke(request.user_message)
         logging.info(f"Resposta gerada pelo bot para o chat: {bot_response}")
         return {"response": bot_response}
     except Exception as e:
-        logging.error(f"Erro ao invocar a cadeia do chatbot para o chat: {e}")
+        logging.error(f"Erro ao invocar a cadeia do chatbot: {e}")
         return {"response": "Desculpe, ocorreu um erro ao processar sua solicitação."}
 # --- Fim do novo endpoint ---
 
-
-# Rota para o webhook do Twilio
-@app.post("/webhook")
-async def handle_whatsapp_message(request: Request):
-    form_data = await request.form()
-    incoming_msg = form_data.get('Body')
-    sender_id = form_data.get('From')
-
-    logging.info(f"Mensagem recebida de {sender_id}: {incoming_msg}")
-
-    resp = MessagingResponse()
-
-    if not incoming_msg:
-        logging.warning("Mensagem vazia recebida.")
-        resp.message("Desculpe, não recebi nenhuma mensagem. Poderia tentar novamente?")
-        return Response(content=str(resp), media_type="application/xml")
-
-    if chain is None:
-        logging.error("A cadeia RAG não foi inicializada. Respondendo com mensagem de erro.")
-        resp.message("Desculpe, o sistema de conhecimento está indisponível no momento. Por favor, tente novamente mais tarde ou entre em contato direto com a farmácia.")
-        return Response(content=str(resp), media_type="application/xml")
-
-    try:
-        bot_response = chain.invoke({"user_message": incoming_msg})
-        logging.info(f"Resposta gerada pelo bot: {bot_response}")
-        resp.message(bot_response)
-    except Exception as e:
-        logging.error(f"Erro ao invocar a cadeia do chatbot: {e}")
-        resp.message("Desculpe, ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.")
-
-    return Response(content=str(resp), media_type="application/xml")
 
 # Evento de startup da aplicação FastAPI
 @app.on_event("startup")
 async def startup_event():
     logging.info("Aplicação iniciando. Carregando documentos para RAG...")
+    # O diretório 'data' deve conter os arquivos PDF
     load_and_process_documents("data")
     logging.info("Processo de carregamento de documentos concluído.")
+

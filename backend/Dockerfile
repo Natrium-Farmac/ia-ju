@@ -1,11 +1,11 @@
-# Usa a imagem oficial do Python 3.10 como base
-FROM python:3.10-slim
+# Usa uma imagem base do Python
+FROM python:3.9-slim
 
-# Define o diretório de trabalho dentro do contêiner
+# Define o diretório de trabalho no contêiner
 WORKDIR /app
 
-# Copia o arquivo de requisitos para o contêiner
-COPY requirements.txt .
+# Copia os arquivos de definição de pacotes
+COPY requirements.txt ./
 
 # Instala as dependências
 RUN pip install --no-cache-dir -r requirements.txt
@@ -13,11 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia o restante do código da aplicação
 COPY . .
 
-# Copia a pasta 'data' para o contêiner
-COPY data ./data
-
-# Expõe a porta 5000 para que o mundo exterior possa se comunicar com o contêiner
-EXPOSE 5000
-
-# Define o comando para executar a aplicação quando o contêiner iniciar
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]
+# Comando de inicialização. O 'uvicorn' servirá a aplicação.
+# O 'command' no docker-compose.yml irá sobrescrever este,
+# mas é bom ter uma opção de fallback aqui.
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

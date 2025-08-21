@@ -5,11 +5,7 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {
-      animation: {
-        'bounce-slow': 'bounce 1.5s infinite',
-      }
-    },
+    extend: {},
   },
   plugins: [],
 }
